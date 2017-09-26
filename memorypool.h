@@ -99,8 +99,9 @@ template<class T>
 inline void Memorypool<T>::pre_allocate_elements(uint elements)
 {
 	uint e_amount = elements + next_element - 1;
-	while (e_amount >> BITSHIFT > nr_of_blocks)
+	while (e_amount >> BITSHIFT >= nr_of_blocks)
 		allocate_new_block();
+
 }
 
 template<class T>
