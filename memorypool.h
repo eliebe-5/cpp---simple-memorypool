@@ -59,7 +59,7 @@ inline Memorypool<T>::~Memorypool()
 template<class T>
 inline uint Memorypool<T>::new_element()
 {
-	if (next_element >> BITSHIFT == nr_of_blocks)
+	if (next_element*element_size >> BITSHIFT == nr_of_blocks)
 		allocate_new_block();
 	
 	uint element = next_element;
@@ -72,14 +72,14 @@ inline uint Memorypool<T>::new_element()
 template<class T>
 inline uint Memorypool<T>::new_element(T val)
 {
-	if (next_element >> BITSHIFT == nr_of_blocks)
+	if (next_element*element_size >> BITSHIFT == nr_of_blocks)
 		allocate_new_block();
 
 	uint element = next_element;
 
 	next_element++;
 
-	blocks[element >> BITSHIFT][element & (BLOCKSIZE - 1)] = val;
+	blocks[element*element_size >> BITSHIFT][element & (BLOCKSIZE - 1)] = val;
 
 	return element;
 }
@@ -87,7 +87,7 @@ inline uint Memorypool<T>::new_element(T val)
 template<class T>
 inline T * Memorypool<T>::get_element_ref(uint index)
 {
-	uint block_index = index >> BITSHIFT;
+	uint block_index = index*element_size >> BITSHIFT;
 	if (index >= next_element)
 		throw std::out_of_range("Out of range\n");
 
@@ -99,7 +99,7 @@ template<class T>
 inline void Memorypool<T>::pre_allocate_elements(uint elements)
 {
 	uint e_amount = elements + next_element - 1;
-	while (e_amount >> BITSHIFT >= nr_of_blocks)
+	while (e_amount*element_size >> BITSHIFT >= nr_of_blocks)
 		allocate_new_block();
 
 }
