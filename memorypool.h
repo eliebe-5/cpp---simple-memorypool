@@ -3,8 +3,10 @@
 #include <vector>
 #include <stdexcept>
 
-#define BLOCKSIZE 4096 //2^12
-#define BITSHIFT 12
+#include <stdio.h>
+
+#define BLOCKSIZE 8192
+#define BITSHIFT 13
 #define uint unsigned int
 #define ushort unsigned short
 
@@ -15,7 +17,6 @@ class Memorypool
 {
 private:
 	std::vector<T*> blocks;
-	ushort element_size;
 	uint nr_of_blocks;
 	uint next_element;
 
@@ -25,8 +26,7 @@ public:
 	Memorypool();
 	~Memorypool();
 
-	uint new_element();
-	uint new_element(T);
+	T* new_element();
 	T* get_element_ref(uint);
 	void pre_allocate_elements(uint);
 
@@ -36,15 +36,14 @@ public:
 template<class T>
 inline void Memorypool<T>::allocate_new_block()
 {
-	blocks.push_back(new T[BLOCKSIZE/element_size]);
+	blocks.push_back(new T[BLOCKSIZE/sizeof(T)]);
 	nr_of_blocks++;
 }
 
 template<class T>
 inline Memorypool<T>::Memorypool()
 {
-	assert(BLOCKSIZE % sizeof(T) == 0);
-	element_size = (ushort)sizeof(T);
+	static_assert(BLOCKSIZE % sizeof(T) == 0);
 	nr_of_blocks = 0;
 	next_element = 0;
 }
@@ -57,41 +56,27 @@ inline Memorypool<T>::~Memorypool()
 }
 
 template<class T>
-inline uint Memorypool<T>::new_element()
+inline T* Memorypool<T>::new_element()
 {
-	if (next_element*element_size >> BITSHIFT == nr_of_blocks)
-		allocate_new_block();
-	
-	uint element = next_element;
-
-	next_element++;
-
-	return element;
-}
-
-template<class T>
-inline uint Memorypool<T>::new_element(T val)
-{
-	if (next_element*element_size >> BITSHIFT == nr_of_blocks)
+	if (next_element*sizeof(T) >> BITSHIFT == nr_of_blocks)
 		allocate_new_block();
 
 	uint element = next_element;
 
 	next_element++;
-
-	blocks[element*element_size >> BITSHIFT][element & (BLOCKSIZE - 1)] = val;
-
-	return element;
+    
+	return get_element_ref(element);
 }
+
 
 template<class T>
 inline T * Memorypool<T>::get_element_ref(uint index)
 {
-	uint block_index = index*element_size >> BITSHIFT;
+	uint block_index = index*sizeof(T) >> BITSHIFT;
 	if (index >= next_element)
 		throw std::out_of_range("Out of range\n");
 
-	uint element_index = index & (BLOCKSIZE - 1);
+	uint element_index = (index & (BLOCKSIZE/sizeof(T) - 1));
 	return &(blocks[block_index][element_index]);
 }
 
@@ -99,7 +84,7 @@ template<class T>
 inline void Memorypool<T>::pre_allocate_elements(uint elements)
 {
 	uint e_amount = elements + next_element - 1;
-	while (e_amount*element_size >> BITSHIFT >= nr_of_blocks)
+	while (e_amount*sizeof(T) >> BITSHIFT >= nr_of_blocks)
 		allocate_new_block();
 
 }
